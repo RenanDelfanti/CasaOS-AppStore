@@ -1,0 +1,99 @@
+name: invidious-casaos
+services:
+  invidious-postgres:
+    cpu_shares: 90
+    command: []
+    container_name: invidious-postgres
+    deploy:
+      resources:
+        limits:
+          memory: 8052M
+    environment:
+      - POSTGRES_DB=invidious
+      - POSTGRES_PASSWORD=kemal
+      - POSTGRES_USER=kemal
+    hostname: invidious-postgres
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "pg_isready -U  -d "
+    image: docker.io/library/postgres:14
+    labels:
+      icon: https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Invidious-logo.svg/2048px-Invidious-logo.svg.png
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: /DATA/AppData/invidious-app/postgresdata
+        target: /var/lib/postgresql/data
+      - type: bind
+        source: /DATA/AppData/invidious-app/config/sql
+        target: /config/sql
+      - type: bind
+        source: /DATA/AppData/invidious-app/docker/init-invidious-db.sh
+        target: /docker-entrypoint-initdb.d/init-invidious-db.sh
+    ports: []
+    devices: []
+    cap_add: []
+    networks:
+      - default
+    privileged: false
+  invidious-app:
+    cpu_shares: 90
+    command: []
+    container_name: invidious-app
+    deploy:
+      resources:
+        limits:
+          memory: 8052M
+    environment:
+      - |
+        INVIDIOUS_CONFIG=db:
+          dbname: invidious
+          user: kemal
+          password: kemal
+          host: invidious-postgres
+          port: 5432
+        check_tables: true
+        external_port: 3421
+        domain: raspberrypi
+        # https_only: false
+        # statistics_enabled: false
+        hmac_key: d98y43fngfuby23t5
+    hostname: invidious-app
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -nv --tries=1 --spider http://127.0.0.1:3000/api/v1/trending ||
+          exit 1
+      timeout: 5s
+      interval: 30s
+      retries: 2
+    image: ceramicwhite/invidious:latest
+    labels:
+      icon: https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Invidious-logo.svg/2048px-Invidious-logo.svg.png
+    ports:
+      - target: 3000
+        published: "3421"
+        protocol: tcp
+    restart: unless-stopped
+    volumes: []
+    devices: []
+    cap_add: []
+    networks:
+      - default
+    privileged: false
+networks:
+  default:
+    name: charming_marc_default
+x-casaos:
+  author: self
+  category: self
+  hostname: ""
+  icon: https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Invidious-logo.svg/2048px-Invidious-logo.svg.png
+  index: /
+  is_uncontrolled: false
+  port_map: "3421"
+  scheme: http
+  store_app_id: charming_marc
+  title:
+    custom: Invidious
